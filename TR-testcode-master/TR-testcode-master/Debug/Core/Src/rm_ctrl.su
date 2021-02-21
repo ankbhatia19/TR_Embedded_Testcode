@@ -1,7 +1,0 @@
-rm_ctrl.c:39:6:grand_pid_init	16	static
-rm_ctrl.c:57:6:imu_calibration	48	static
-rm_ctrl.c:120:6:imu_temp_pid_ctrl	16	static
-rm_ctrl.c:129:7:yaw_imu_pid_ctrl	24	static
-rm_ctrl.c:143:7:yaw_ecd_pid_ctrl	24	static
-rm_ctrl.c:150:7:pit_imu_pid_ctrl	24	static
-rm_ctrl.c:161:7:pit_ecd_pid_ctrl	24	static

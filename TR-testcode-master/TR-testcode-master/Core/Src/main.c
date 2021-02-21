@@ -114,7 +114,7 @@ static void MX_TIM12_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/* USER CODE END 0 */
+
 
 #define DRIVE_LF_ID 0
 #define DRIVE_LB_ID 1
@@ -168,6 +168,8 @@ void processController(){
 		break;
 	}
 }
+/* USER CODE END 0 */
+
 
 /**
   * @brief  The application entry point.
