@@ -121,16 +121,13 @@ static void MX_TIM12_Init(void);
 #define DRIVE_RF_ID 2
 #define DRIVE_RB_ID 3
 const float JOYSTICK_SCALE = 0.3f; // max 640, hitting 200, 640 * 0.3 = 192 rpm
-const float GIMBAL_JOYSTICK_SCALE = 0.28f; // max 640, 640*0.28=179 degree
+const float GIMBAL_JOYSTICK_SCALE = 6.4f; // max 640, 640*6.4= 4096
 const short MOTOR_BOUNDS = 450; // max rpm for wheels 450
 
 short LF_rpm,LB_rpm,RF_rpm,RB_rpm,gimbal_yaw,gimbal_pitch,flywheel_speed;
 
-short YAW_ECD_MID = 27;
-short PIT_ECD_MID = -51;
-
-short yaw_ecd_target = 27;
-short pit_ecd_target = -51;
+short yaw_ecd_target;
+short pit_ecd_target;
 
 float indexer_speed = 0;
 
@@ -158,7 +155,7 @@ void processController(){
 			LB_rpm = joyLeftY - joyLeftX;
 			RB_rpm = joyLeftX + joyLeftY;
 			gimbal_yaw = joyRightX;
-			gimbal_pitch = joyRightY;
+			gimbal_pitch = joyRightY * 0.1; // pitch don't have the same range as yaw, now limit to 20 degrees
 			indexer_speed = 30;
 		break;
 		default:
@@ -256,8 +253,8 @@ int main(void)
 	// process the inputs from the rc into targets for each pid module
 	processController();
 
-	yaw_ecd_target = YAW_ECD_MID + gimbal_yaw;
-	pit_ecd_target = PIT_ECD_MID + gimbal_pitch;
+	yaw_ecd_target = YAW_POS_DEFAULT + gimbal_yaw;
+	pit_ecd_target = PIT_POS_DEFAULT + gimbal_pitch;
 
 	yaw_ecd_target = set_rotation_target(yaw_ecd_target, ECD_PERIOD);
 	//pit_ecd_target = set_rotation_target(pit_ecd_target, ECD_PERIOD); // technically pitch should not rotate 360 degree, so no use
