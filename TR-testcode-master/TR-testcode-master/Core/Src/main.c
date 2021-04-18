@@ -132,10 +132,12 @@ short PIT_ECD_MID = -51;
 short yaw_ecd_target = 27;
 short pit_ecd_target = -51;
 
+float indexer_speed = 0;
 
 void processController(){
 	gimbal_yaw = 0;
 	gimbal_pitch = 0;
+	indexer_speed = 0;
 	short joyLeftX = (short)(rc.ch1 * JOYSTICK_SCALE);
 	short joyLeftY = (short)(rc.ch2 * JOYSTICK_SCALE);
 	short joyRightX;
@@ -157,6 +159,7 @@ void processController(){
 			RB_rpm = joyLeftX + joyLeftY;
 			gimbal_yaw = joyRightX;
 			gimbal_pitch = joyRightY;
+			indexer_speed = 30;
 		break;
 		default:
 			LF_rpm = 0;LB_rpm = 0;RF_rpm = 0;RB_rpm = 0;
@@ -259,21 +262,24 @@ int main(void)
 	yaw_ecd_target = set_rotation_target(yaw_ecd_target, ECD_PERIOD);
 	//pit_ecd_target = set_rotation_target(pit_ecd_target, ECD_PERIOD); // technically pitch should not rotate 360 degree, so no use
 
-	yaw_ecd_pid_ctrl(motors[4].ecd, yaw_ecd_target);
-	pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
+	float yaw_output = yaw_ecd_pid_ctrl(motors[4].ecd, yaw_ecd_target);
+	float pit_output = pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
 
-	wheels_rpm_ctrl_calc(LF_rpm,LB_rpm,RF_rpm,RB_rpm);
+	float wheels_output[4];
+	wheels_rpm_ctrl_calc(LF_rpm,LB_rpm,RF_rpm,RB_rpm, wheels_output);
+
+	float indexer_output = indexer_rpm_ctrl_calc(indexer_speed);
 
 	can_transmit(&hcan1, CAN_CHASSIS_ALL_ID,
-			wheels_rpm_pid[0].out,
-			wheels_rpm_pid[1].out,
-			wheels_rpm_pid[2].out,
-			wheels_rpm_pid[3].out);
+			wheels_output[0],
+			wheels_output[1],
+			wheels_output[2],
+			wheels_output[3]);
 
 	can_transmit(&hcan1, CAN_GIMBAL_ALL_ID,
-			yaw_rpm_ecd_pid.out,
-			pit_rpm_ecd_pid.out,
-			idx_rpm_ecd_pid.out, 0);
+			yaw_output,
+			pit_output,
+			indexer_output, 0);
 
 	set_pwm_flywheel(flywheel_speed);
 

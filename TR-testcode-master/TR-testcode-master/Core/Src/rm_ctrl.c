@@ -171,13 +171,18 @@ float pit_ecd_pid_ctrl(float feedback, float target){
 	return pit_rpm_ecd_pid.out;
 }
 
-void wheels_rpm_ctrl_calc(float LF, float LB, float RF, float RB){
+void wheels_rpm_ctrl_calc(float LF, float LB, float RF, float RB, float arr[]){
 	PID_calc(&wheels_rpm_pid[0], motors[0].speed_rpm, LF);
 	PID_calc(&wheels_rpm_pid[1], motors[1].speed_rpm, LB);
 	PID_calc(&wheels_rpm_pid[2], motors[2].speed_rpm, RF);
 	PID_calc(&wheels_rpm_pid[3], motors[3].speed_rpm, RB);
+	arr[0] = wheels_rpm_pid[0].out;
+	arr[1] = wheels_rpm_pid[1].out;
+	arr[2] = wheels_rpm_pid[2].out;
+	arr[3] = wheels_rpm_pid[3].out;
 }
 
-void indexer_rpm_ctrl_calc(float target) {
-	PID_calc(&idx_rpm_ecd_pid[3], motors[6].speed_rpm, target);
+float indexer_rpm_ctrl_calc(float target) {
+	PID_calc(&idx_rpm_ecd_pid, motors[6].speed_rpm, target);
+	return idx_rpm_ecd_pid.out;
 }
