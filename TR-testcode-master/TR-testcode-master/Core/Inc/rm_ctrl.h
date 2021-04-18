@@ -31,4 +31,8 @@ extern float yaw_imu_pid_ctrl(float feedback, float target);
 
 extern float yaw_ecd_pid_ctrl(float feedback, float target);
 
+extern void wheels_rpm_ctrl_calc(float LF, float LB, float RF, float RB);
+
+extern void indexer_rpm_ctrl_calc(float target);
+
 #endif /* INC_RM_CTRL_H_ */

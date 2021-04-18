@@ -120,11 +120,18 @@ static void MX_TIM12_Init(void);
 #define DRIVE_LB_ID 1
 #define DRIVE_RF_ID 2
 #define DRIVE_RB_ID 3
-const float JOYSTICK_SCALE = 0.5f;
-const float GIMBAL_JOYSTICK_SCALE = 0.4f;
-const short MOTOR_BOUNDS = 10000;
+const float JOYSTICK_SCALE = 0.3f; // max 640, hitting 200, 640 * 0.3 = 192 rpm
+const float GIMBAL_JOYSTICK_SCALE = 0.28f; // max 640, 640*0.28=179 degree
+const short MOTOR_BOUNDS = 450; // max rpm for wheels 450
 
-short LF_curr,LB_curr,RF_curr,RB_curr,gimbal_yaw,gimbal_pitch,flywheel_speed;
+short LF_rpm,LB_rpm,RF_rpm,RB_rpm,gimbal_yaw,gimbal_pitch,flywheel_speed;
+
+short YAW_ECD_MID = 27;
+short PIT_ECD_MID = -51;
+
+short yaw_ecd_target = 27;
+short pit_ecd_target = -51;
+
 
 void processController(){
 	gimbal_yaw = 0;
@@ -136,35 +143,35 @@ void processController(){
 	switch(rc.sw1){
 		case 1: //left up (left stick strafe, right stick bot rotation)
 			joyRightX = (short)(rc.ch3 * JOYSTICK_SCALE);
-			LF_curr = joyLeftX + joyLeftY + joyRightX;
-			RF_curr = joyLeftY - joyLeftX - joyRightX;
-			LB_curr = joyLeftY - joyLeftX + joyRightX;
-			RB_curr = joyLeftX + joyLeftY - joyRightX;
+			LF_rpm = joyLeftX + joyLeftY + joyRightX;
+			RF_rpm = joyLeftY - joyLeftX - joyRightX;
+			LB_rpm = joyLeftY - joyLeftX + joyRightX;
+			RB_rpm = joyLeftX + joyLeftY - joyRightX;
 		break;
 		case 3: //left middle (left stick strafe, right stick aim)
 			joyRightX = (short)(rc.ch3 * GIMBAL_JOYSTICK_SCALE);
 			joyRightY = (short)(rc.ch4 * GIMBAL_JOYSTICK_SCALE);
-			LF_curr = joyLeftX + joyLeftY;
-			RF_curr = joyLeftY - joyLeftX;
-			LB_curr = joyLeftY - joyLeftX;
-			RB_curr = joyLeftX + joyLeftY;
+			LF_rpm = joyLeftX + joyLeftY;
+			RF_rpm = joyLeftY - joyLeftX;
+			LB_rpm = joyLeftY - joyLeftX;
+			RB_rpm = joyLeftX + joyLeftY;
 			gimbal_yaw = joyRightX;
 			gimbal_pitch = joyRightY;
 		break;
 		default:
-			LF_curr = 0;LB_curr = 0;RF_curr = 0;RB_curr = 0;
+			LF_rpm = 0;LB_rpm = 0;RF_rpm = 0;RB_rpm = 0;
 			break;
 	}
-	LF_curr = fmax(fmin(LF_curr,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	LB_curr = fmax(fmin(LB_curr,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	RF_curr = fmax(fmin(RF_curr,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	RB_curr = fmax(fmin(RB_curr,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	LF_rpm = fmax(fmin(LF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	LB_rpm = fmax(fmin(LB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	RF_rpm = fmax(fmin(RF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	RB_rpm = fmax(fmin(RB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
 	switch(rc.sw2){
 	case 1:
-		flywheel_speed = 300;
+		flywheel_speed = 1800;
 		break;
 	default:
-		flywheel_speed = 0;
+		flywheel_speed = 1000;
 		break;
 	}
 }
@@ -242,9 +249,32 @@ int main(void)
 
 
 	imu_temp_pid_ctrl(imu.temp, 50.0f);
+
+	// process the inputs from the rc into targets for each pid module
 	processController();
-	can_transmit(&hcan1, CAN_CHASSIS_ALL_ID, LF_curr,LB_curr,RF_curr,RB_curr);
-	can_transmit(&hcan1, CAN_GIMBAL_ALL_ID,gimbal_yaw,gimbal_pitch, 0,0);
+
+	yaw_ecd_target = YAW_ECD_MID + gimbal_yaw;
+	pit_ecd_target = PIT_ECD_MID + gimbal_pitch;
+
+	yaw_ecd_target = set_rotation_target(yaw_ecd_target, ECD_PERIOD);
+	//pit_ecd_target = set_rotation_target(pit_ecd_target, ECD_PERIOD); // technically pitch should not rotate 360 degree, so no use
+
+	yaw_ecd_pid_ctrl(motors[4].ecd, yaw_ecd_target);
+	pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
+
+	wheels_rpm_ctrl_calc(LF_rpm,LB_rpm,RF_rpm,RB_rpm);
+
+	can_transmit(&hcan1, CAN_CHASSIS_ALL_ID,
+			wheels_rpm_pid[0].out,
+			wheels_rpm_pid[1].out,
+			wheels_rpm_pid[2].out,
+			wheels_rpm_pid[3].out);
+
+	can_transmit(&hcan1, CAN_GIMBAL_ALL_ID,
+			yaw_rpm_ecd_pid.out,
+			pit_rpm_ecd_pid.out,
+			idx_rpm_ecd_pid.out, 0);
+
 	set_pwm_flywheel(flywheel_speed);
 
 

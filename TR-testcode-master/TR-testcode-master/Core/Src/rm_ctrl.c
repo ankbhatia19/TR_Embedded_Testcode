@@ -26,6 +26,7 @@ const float yaw_pos_ecd_PID[3] = {5, 0.1, 3};
 pid_type_def yaw_pos_ecd_pid;
 const float yaw_rpm_ecd_PID[3] = {10, 0.1, 0};
 pid_type_def yaw_rpm_ecd_pid;
+
 const float pit_deg_imu_PID[3] = {20, 0.1, 3};
 pid_type_def pit_deg_imu_pid;
 const float pit_rpm_imu_PID[3] = {50, 0.1, 0};
@@ -35,23 +36,28 @@ pid_type_def pit_pos_ecd_pid;
 const float pit_rpm_ecd_PID[3] = {10, 0.1, 0};
 pid_type_def pit_rpm_ecd_pid;
 
+const float idx_rpm_ecd_PID[3] = {10, 0.1, 0}; // indexer
+pid_type_def idx_rpm_ecd_pid;
+
 
 void grand_pid_init(){
 	PID_init(&imu_temp_pid, PID_POSITION, imu_temp_PID, TEMPERATURE_PID_MAX_OUT, TEMPERATURE_PID_MAX_IOUT);
 
 	for (int i = 0; i < 4; i++){
-		PID_init(&wheels_rpm_pid[i], PID_POSITION, wheels_rpm_PID, 16384, 1000);
+		PID_init(&wheels_rpm_pid[i], PID_POSITION, wheels_rpm_PID, 16384, 1000); // M3508 output limit: 16384, rpm limit 450
 	}
 
-	PID_init(&yaw_deg_imu_pid, PID_POSITION, yaw_deg_imu_PID, 10000, 5000);
-	PID_init(&yaw_rpm_imu_pid, PID_POSITION, yaw_rpm_imu_PID, 16384, 5000);
-	PID_init(&yaw_pos_ecd_pid, PID_POSITION, yaw_pos_ecd_PID, 10000, 5000);
-	PID_init(&yaw_rpm_ecd_pid, PID_POSITION, yaw_rpm_ecd_PID, 16384, 5000);
+	PID_init(&yaw_deg_imu_pid, PID_POSITION, yaw_deg_imu_PID, 320, 100);
+	PID_init(&yaw_rpm_imu_pid, PID_POSITION, yaw_rpm_imu_PID, 30000, 5000); // GM6020 output limit: 30000
+	PID_init(&yaw_pos_ecd_pid, PID_POSITION, yaw_pos_ecd_PID, 320, 100); // GM6020 max rpm: 320
+	PID_init(&yaw_rpm_ecd_pid, PID_POSITION, yaw_rpm_ecd_PID, 30000, 5000);
 
-	PID_init(&pit_deg_imu_pid, PID_POSITION, pit_deg_imu_PID, 10000, 5000);
-	PID_init(&pit_rpm_imu_pid, PID_POSITION, pit_rpm_imu_PID, 16384, 5000);
-	PID_init(&pit_pos_ecd_pid, PID_POSITION, pit_pos_ecd_PID, 10000, 5000);
-	PID_init(&pit_rpm_ecd_pid, PID_POSITION, pit_rpm_ecd_PID, 16384, 5000);
+	PID_init(&pit_deg_imu_pid, PID_POSITION, pit_deg_imu_PID, 320, 100);
+	PID_init(&pit_rpm_imu_pid, PID_POSITION, pit_rpm_imu_PID, 30000, 5000);
+	PID_init(&pit_pos_ecd_pid, PID_POSITION, pit_pos_ecd_PID, 320, 100);
+	PID_init(&pit_rpm_ecd_pid, PID_POSITION, pit_rpm_ecd_PID, 30000, 5000);
+
+	PID_init(&idx_rpm_ecd_pid, PID_POSITION, idx_rpm_ecd_PID, 10000, 100); // GM2006 output limit: 10000, max rpm 500
 }
 
 void imu_calibration(){
@@ -163,4 +169,15 @@ float pit_ecd_pid_ctrl(float feedback, float target){
 	PID_calc(&pit_pos_ecd_pid, 0, error);
 	PID_calc(&pit_rpm_ecd_pid, motors[5].speed_rpm, pit_pos_ecd_pid.out);
 	return pit_rpm_ecd_pid.out;
+}
+
+void wheels_rpm_ctrl_calc(float LF, float LB, float RF, float RB){
+	PID_calc(&wheels_rpm_pid[0], motors[0].speed_rpm, LF);
+	PID_calc(&wheels_rpm_pid[1], motors[1].speed_rpm, LB);
+	PID_calc(&wheels_rpm_pid[2], motors[2].speed_rpm, RF);
+	PID_calc(&wheels_rpm_pid[3], motors[3].speed_rpm, RB);
+}
+
+void indexer_rpm_ctrl_calc(float target) {
+	PID_calc(&idx_rpm_ecd_pid[3], motors[6].speed_rpm, target);
 }
