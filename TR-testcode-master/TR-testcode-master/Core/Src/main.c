@@ -120,9 +120,9 @@ static void MX_TIM12_Init(void);
 #define DRIVE_LB_ID 1
 #define DRIVE_RF_ID 2
 #define DRIVE_RB_ID 3
-const float JOYSTICK_SCALE = 0.3f; // max 640, hitting 200, 640 * 0.3 = 192 rpm
+const float JOYSTICK_SCALE = 5.0f; // max 640, hitting 200, 640 * 0.3 = 192 rpm
 const float GIMBAL_JOYSTICK_SCALE = 6.4f; // max 640, 640*6.4= 4096
-const short MOTOR_BOUNDS = 450; // max rpm for wheels 450
+const short MOTOR_BOUNDS = 4500; // 0.1 rpm for wheels 4500
 
 short LF_rpm,LB_rpm,RF_rpm,RB_rpm,gimbal_yaw,gimbal_pitch,flywheel_speed;
 
@@ -134,29 +134,30 @@ float indexer_speed = 0;
 void processController(){
 	gimbal_yaw = 0;
 	gimbal_pitch = 0;
-	indexer_speed = 0;
-	short joyLeftX = (short)(rc.ch1 * JOYSTICK_SCALE);
-	short joyLeftY = (short)(rc.ch2 * JOYSTICK_SCALE);
+	indexer_speed = 2500;
+	flywheel_speed = (PWM_RESOLUTION * 0.5) - 1;
+	short joyLeftX = (short)(rc.ch3 * JOYSTICK_SCALE * -1);
+	short joyLeftY = (short)(rc.ch4 * JOYSTICK_SCALE * -1);
 	short joyRightX;
 	short joyRightY;
 	switch(rc.sw1){
 		case 1: //left up (left stick strafe, right stick bot rotation)
-			joyRightX = (short)(rc.ch3 * JOYSTICK_SCALE);
+			joyRightX = (short)(rc.ch1 * JOYSTICK_SCALE);
 			LF_rpm = joyLeftX + joyLeftY + joyRightX;
 			RF_rpm = joyLeftY - joyLeftX - joyRightX;
 			LB_rpm = joyLeftY - joyLeftX + joyRightX;
 			RB_rpm = joyLeftX + joyLeftY - joyRightX;
 		break;
 		case 3: //left middle (left stick strafe, right stick aim)
-			joyRightX = (short)(rc.ch3 * GIMBAL_JOYSTICK_SCALE);
-			joyRightY = (short)(rc.ch4 * GIMBAL_JOYSTICK_SCALE);
+			joyRightX = (short)(rc.ch1 * GIMBAL_JOYSTICK_SCALE);
+			joyRightY = (short)(rc.ch2 * GIMBAL_JOYSTICK_SCALE);
 			LF_rpm = joyLeftX + joyLeftY;
 			RF_rpm = joyLeftY - joyLeftX;
 			LB_rpm = joyLeftY - joyLeftX;
 			RB_rpm = joyLeftX + joyLeftY;
 			gimbal_yaw = joyRightX;
 			gimbal_pitch = joyRightY * 0.1; // pitch don't have the same range as yaw, now limit to 20 degrees
-			indexer_speed = 30;
+			//indexer_speed = 30;
 		break;
 		default:
 			LF_rpm = 0;LB_rpm = 0;RF_rpm = 0;RB_rpm = 0;
@@ -166,14 +167,14 @@ void processController(){
 	LB_rpm = fmax(fmin(LB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
 	RF_rpm = fmax(fmin(RF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
 	RB_rpm = fmax(fmin(RB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	switch(rc.sw2){
-	case 1:
-		flywheel_speed = 1800;
-		break;
-	default:
-		flywheel_speed = 1000;
-		break;
-	}
+	//switch(rc.sw2){
+	//case 1:
+	//flywheel_speed = 10000;
+		//break;
+	//default:
+		//flywheel_speed = 1000;
+		//break;
+	//}
 }
 /* USER CODE END 0 */
 
@@ -263,11 +264,11 @@ int main(void)
 	float pit_output = pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
 
 	float wheels_output[4];
-	wheels_rpm_ctrl_calc(LF_rpm,LB_rpm,RF_rpm,RB_rpm, wheels_output);
+	wheels_rpm_ctrl_calc(-1 * LF_rpm,RF_rpm,-1 * LB_rpm,RB_rpm, wheels_output);
 
 	float indexer_output = indexer_rpm_ctrl_calc(indexer_speed);
 
-	can_transmit(&hcan1, CAN_CHASSIS_ALL_ID,
+	/*can_transmit(&hcan1, CAN_CHASSIS_ALL_ID,
 			wheels_output[0],
 			wheels_output[1],
 			wheels_output[2],
@@ -277,7 +278,7 @@ int main(void)
 			yaw_output,
 			pit_output,
 			indexer_output, 0);
-
+	 */
 	set_pwm_flywheel(flywheel_speed);
 
 
