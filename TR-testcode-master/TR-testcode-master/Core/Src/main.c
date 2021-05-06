@@ -17,8 +17,10 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -63,7 +65,6 @@ SPI_HandleTypeDef hspi5;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
-TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim12;
 
 UART_HandleTypeDef huart1;
@@ -107,7 +108,6 @@ static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM12_Init(void);
-static void MX_TIM5_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -121,55 +121,64 @@ static void MX_TIM5_Init(void);
 #define DRIVE_LB_ID 1
 #define DRIVE_RF_ID 2
 #define DRIVE_RB_ID 3
-const float JOYSTICK_SCALE = 0.5f;
-const float GIMBAL_JOYSTICK_SCALE = 0.4f;
-const short MOTOR_BOUNDS = 10000;
+const float JOYSTICK_SCALE = 5.0f; // max 640, hitting 200, 640 * 0.3 = 192 rpm
+const float GIMBAL_JOYSTICK_SCALE = 6.4f; // max 640, 640*6.4= 4096
+const short MOTOR_BOUNDS = 4500; // 0.1 rpm for wheels 4500
 
-short LF_curr,LB_curr,RF_curr,RB_curr,gimbal_yaw,gimbal_pitch,flywheel_speed;
+short LF_rpm,LB_rpm,RF_rpm,RB_rpm,gimbal_yaw,gimbal_pitch,flywheel_speed;
+
+short yaw_ecd_target;
+short pit_ecd_target;
+
+float indexer_speed = 0;
 
 void processController(){
 	gimbal_yaw = 0;
 	gimbal_pitch = 0;
-	short joyLeftX = (short)(rc.ch1 * JOYSTICK_SCALE);
-	short joyLeftY = (short)(rc.ch2 * JOYSTICK_SCALE);
+	indexer_speed = 2500;
+	flywheel_speed = (PWM_RESOLUTION * 0.5) - 1;
+	short joyLeftX = (short)(rc.ch3 * JOYSTICK_SCALE * -1);
+	short joyLeftY = (short)(rc.ch4 * JOYSTICK_SCALE * -1);
 	short joyRightX;
 	short joyRightY;
 	switch(rc.sw1){
 		case 1: //left up (left stick strafe, right stick bot rotation)
-			joyRightX = (short)(rc.ch3 * JOYSTICK_SCALE);
-			LF_curr = joyLeftX + joyLeftY + joyRightX;
-			RF_curr = joyLeftY - joyLeftX - joyRightX;
-			LB_curr = joyLeftY - joyLeftX + joyRightX;
-			RB_curr = joyLeftX + joyLeftY - joyRightX;
+			joyRightX = (short)(rc.ch1 * JOYSTICK_SCALE);
+			LF_rpm = joyLeftX + joyLeftY + joyRightX;
+			RF_rpm = joyLeftY - joyLeftX - joyRightX;
+			LB_rpm = joyLeftY - joyLeftX + joyRightX;
+			RB_rpm = joyLeftX + joyLeftY - joyRightX;
 		break;
 		case 3: //left middle (left stick strafe, right stick aim)
-			joyRightX = (short)(rc.ch3 * GIMBAL_JOYSTICK_SCALE);
-			joyRightY = (short)(rc.ch4 * GIMBAL_JOYSTICK_SCALE);
-			LF_curr = joyLeftX + joyLeftY;
-			RF_curr = joyLeftY - joyLeftX;
-			LB_curr = joyLeftY - joyLeftX;
-			RB_curr = joyLeftX + joyLeftY;
+			joyRightX = (short)(rc.ch1 * GIMBAL_JOYSTICK_SCALE);
+			joyRightY = (short)(rc.ch2 * GIMBAL_JOYSTICK_SCALE);
+			LF_rpm = joyLeftX + joyLeftY;
+			RF_rpm = joyLeftY - joyLeftX;
+			LB_rpm = joyLeftY - joyLeftX;
+			RB_rpm = joyLeftX + joyLeftY;
 			gimbal_yaw = joyRightX;
-			gimbal_pitch = joyRightY;
+			gimbal_pitch = joyRightY * 0.1; // pitch don't have the same range as yaw, now limit to 20 degrees
+			//indexer_speed = 30;
 		break;
 		default:
-			LF_curr = 0;LB_curr = 0;RF_curr = 0;RB_curr = 0;
+			LF_rpm = 0;LB_rpm = 0;RF_rpm = 0;RB_rpm = 0;
 			break;
 	}
-	LF_curr = fmax(fmin(LF_curr,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	LB_curr = fmax(fmin(LB_curr,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	RF_curr = fmax(fmin(RF_curr,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	RB_curr = fmax(fmin(RB_curr,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	switch(rc.sw2){
-	case 1:
-		flywheel_speed = 300;
-		break;
-	default:
-		flywheel_speed = 0;
-		break;
-	}
+	LF_rpm = fmax(fmin(LF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	LB_rpm = fmax(fmin(LB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	RF_rpm = fmax(fmin(RF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	RB_rpm = fmax(fmin(RB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	//switch(rc.sw2){
+	//case 1:
+	//flywheel_speed = 10000;
+		//break;
+	//default:
+		//flywheel_speed = 1000;
+		//break;
+	//}
 }
 /* USER CODE END 0 */
+
 
 /**
   * @brief  The application entry point.
@@ -180,6 +189,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
   count = 0; // keep count in while loop and reset every 10s
   /* USER CODE END 1 */
+
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -210,7 +220,6 @@ int main(void)
   MX_USART6_UART_Init();
   MX_TIM3_Init();
   MX_TIM12_Init();
-  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
 
   led_off();
@@ -231,6 +240,7 @@ int main(void)
   //yaw_target = imu.yaw;
   /* USER CODE END 2 */
 
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -241,9 +251,35 @@ int main(void)
 
 
 	imu_temp_pid_ctrl(imu.temp, 50.0f);
+
+	// process the inputs from the rc into targets for each pid module
 	processController();
-	can_transmit(&hcan1, CAN_CHASSIS_ALL_ID, LF_curr,LB_curr,RF_curr,RB_curr);
-	can_transmit(&hcan1, CAN_GIMBAL_ALL_ID,gimbal_yaw,gimbal_pitch, 0,0);
+
+	yaw_ecd_target = YAW_POS_DEFAULT + gimbal_yaw;
+	pit_ecd_target = PIT_POS_DEFAULT + gimbal_pitch;
+
+	yaw_ecd_target = set_rotation_target(yaw_ecd_target, ECD_PERIOD);
+	//pit_ecd_target = set_rotation_target(pit_ecd_target, ECD_PERIOD); // technically pitch should not rotate 360 degree, so no use
+
+	float yaw_output = yaw_ecd_pid_ctrl(motors[4].ecd, yaw_ecd_target);
+	float pit_output = pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
+
+	float wheels_output[4];
+	wheels_rpm_ctrl_calc(-1 * LF_rpm,RF_rpm,-1 * LB_rpm,RB_rpm, wheels_output);
+
+	float indexer_output = indexer_rpm_ctrl_calc(indexer_speed);
+
+	/*can_transmit(&hcan1, CAN_CHASSIS_ALL_ID,
+			wheels_output[0],
+			wheels_output[1],
+			wheels_output[2],
+			wheels_output[3]);
+
+	can_transmit(&hcan1, CAN_GIMBAL_ALL_ID,
+			yaw_output,
+			pit_output,
+			indexer_output, 0);
+	 */
 	set_pwm_flywheel(flywheel_speed);
 
 
@@ -282,8 +318,7 @@ void SystemClock_Config(void)
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -297,7 +332,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB buses clocks
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -592,63 +627,6 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 2 */
   HAL_TIM_MspPostInit(&htim4);
-
-}
-
-/**
-  * @brief TIM5 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM5_Init(void)
-{
-
-  /* USER CODE BEGIN TIM5_Init 0 */
-
-  /* USER CODE END TIM5_Init 0 */
-
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM5_Init 1 */
-
-  /* USER CODE END TIM5_Init 1 */
-  htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 0;
-  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 4294967295;
-  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_PWM_Init(&htim5) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM5_Init 2 */
-
-  /* USER CODE END TIM5_Init 2 */
-  HAL_TIM_MspPostInit(&htim5);
 
 }
 
