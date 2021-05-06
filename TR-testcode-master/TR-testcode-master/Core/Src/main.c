@@ -20,12 +20,13 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <math.h>
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include "rm_uart.h"
 #include "rm_gpio.h"
 #include "rm_can.h"
@@ -45,8 +46,8 @@
 #define INF_2
 // default positions
 #ifdef INF_2
-#define YAW_POS_DEFAULT (2617)
-#define PIT_POS_DEFAULT (4710)
+#define YAW_POS_DEFAULT (750)
+#define PIT_POS_DEFAULT (6730)
 #endif
 /* USER CODE END PD */
 
