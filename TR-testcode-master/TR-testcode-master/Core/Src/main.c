@@ -47,6 +47,18 @@
 #define YAW_POS_DEFAULT (750)
 #define PIT_POS_DEFAULT (6730)
 #endif
+
+#define DRIVE_LF_ID 0
+#define DRIVE_LB_ID 1
+#define DRIVE_RF_ID 2
+#define DRIVE_RB_ID 3
+#define RPM_SCALE 10
+#define JOY_TO_RPM (1 / 640.0f) // max 640, 640 / 640.0f = 1 rpm
+#define JOY_TO_ECD (6.4f) // max 640, 640 * 6.4f = 4096
+#define DRIVE_SPEED_DEFAULT 200 // 200 rpm
+#define MOTOR_BOUNDS 4500
+#define GIMBAL_RPM_LIMIT 3200
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -77,20 +89,17 @@ DMA_HandleTypeDef hdma_usart2_tx;
 char buf[200];
 int count;
 
-// target definitions
-float wheels_speed[4] = {0};
-float yaw_target = 0;
-float pit_target = 0;
-float trigger_target = 0;
+short isKB = 0;
+short LF_rpm,LB_rpm,RF_rpm,RB_rpm;
+short gimbal_yaw,gimbal_pitch;
+short yaw_rpm, pit_rpm;
+short flywheel_speed;
 
-// output definitions
-int16_t wheels_out[4] = {0};
-int16_t yaw_out = 0;
-int16_t pit_out = 0;
-int16_t trigger_out = 0;
+short yaw_ecd_target;
+short pit_ecd_target;
 
-// tracking variables
-int16_t yaw_ecd;
+float indexer_speed = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,74 +118,109 @@ static void MX_TIM3_Init(void);
 static void MX_TIM12_Init(void);
 static void MX_TIM5_Init(void);
 /* USER CODE BEGIN PFP */
-
+void processMKB();
+void processController();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void processMKB(){
+	// axies y-> up, x -> right, motors going forward when pos (left CCW, right CW)
+	short kbX = rc.kb.bit.D - rc.kb.bit.A;
+	short kbY = rc.kb.bit.W - rc.kb.bit.S;
+	short kbRotation = rc.kb.bit.E - rc.kb.bit.Q;
+	short mouseLC = rc.mouse.l;
+	short mouseRC = rc.mouse.r;
+	short mouseSpeedX = rc.mouse.x;
+	short mouseSpeedY = rc.mouse.y;
 
+	yaw_rpm = fmax(fmin(mouseSpeedX, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
+	pit_rpm = fmax(fmin(mouseSpeedY, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
 
-
-#define DRIVE_LF_ID 0
-#define DRIVE_LB_ID 1
-#define DRIVE_RF_ID 2
-#define DRIVE_RB_ID 3
-const float JOYSTICK_SCALE = 5.0f; // max 640, hitting 200, 640 * 0.3 = 192 rpm
-const float GIMBAL_JOYSTICK_SCALE = 6.4f; // max 640, 640*6.4= 4096
-const short MOTOR_BOUNDS = 4500; // 0.1 rpm for wheels 4500
-
-short LF_rpm,LB_rpm,RF_rpm,RB_rpm,gimbal_yaw,gimbal_pitch,flywheel_speed;
-
-short yaw_ecd_target;
-short pit_ecd_target;
-
-float indexer_speed = 0;
-
-void processController(){
-	gimbal_yaw = 0;
-	gimbal_pitch = 0;
-	indexer_speed = 2500;
-	flywheel_speed = (PWM_RESOLUTION * 0.5) - 1;
-	short joyLeftX = (short)(rc.ch3 * JOYSTICK_SCALE * -1);
-	short joyLeftY = (short)(rc.ch4 * JOYSTICK_SCALE * -1);
-	short joyRightX;
-	short joyRightY;
-	switch(rc.sw1){
-		case 1: //left up (left stick strafe, right stick bot rotation)
-			joyRightX = (short)(rc.ch1 * JOYSTICK_SCALE);
-			LF_rpm = joyLeftX + joyLeftY + joyRightX;
-			RF_rpm = joyLeftY - joyLeftX - joyRightX;
-			LB_rpm = joyLeftY - joyLeftX + joyRightX;
-			RB_rpm = joyLeftX + joyLeftY - joyRightX;
-		break;
-		case 3: //left middle (left stick strafe, right stick aim)
-			joyRightX = (short)(rc.ch1 * GIMBAL_JOYSTICK_SCALE);
-			joyRightY = (short)(rc.ch2 * GIMBAL_JOYSTICK_SCALE);
-			LF_rpm = joyLeftX + joyLeftY;
-			RF_rpm = joyLeftY - joyLeftX;
-			LB_rpm = joyLeftY - joyLeftX;
-			RB_rpm = joyLeftX + joyLeftY;
-			gimbal_yaw = joyRightX;
-			gimbal_pitch = joyRightY * 0.1; // pitch don't have the same range as yaw, now limit to 20 degrees
-			//indexer_speed = 30;
-		break;
-		default:
-			LF_rpm = 0;LB_rpm = 0;RF_rpm = 0;RB_rpm = 0;
-			break;
+	if (mouseRC) {
+		flywheel_speed = (short) (PWM_RESOLUTION * 0.2f);
+	} else {
+		flywheel_speed = (short) (PWM_RESOLUTION * 0.1f);
 	}
+
+	if (mouseLC) {
+		indexer_speed = 250 * RPM_SCALE;
+	} else {
+		indexer_speed = 0 * RPM_SCALE;
+	}
+
+	LF_rpm = (short) ((kbY - kbX + kbRotation) * RPM_SCALE * DRIVE_SPEED_DEFAULT);
+	RF_rpm = (short) ((kbY + kbX - kbRotation) * RPM_SCALE * DRIVE_SPEED_DEFAULT);
+	LB_rpm = (short) ((kbY + kbX + kbRotation) * RPM_SCALE * DRIVE_SPEED_DEFAULT);
+	RB_rpm = (short) ((kbY - kbX - kbRotation) * RPM_SCALE * DRIVE_SPEED_DEFAULT);
+
 	LF_rpm = fmax(fmin(LF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
 	LB_rpm = fmax(fmin(LB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
 	RF_rpm = fmax(fmin(RF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
 	RB_rpm = fmax(fmin(RB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	//switch(rc.sw2){
-	//case 1:
-	//flywheel_speed = 10000;
-		//break;
-	//default:
-		//flywheel_speed = 1000;
-		//break;
-	//}
 }
+
+void processController(){
+	// axies y-> up, x -> right, motors going forward when pos (left CCW, right CW)
+	if (rc.sw1 == 2 && rc.sw2 == 2){
+		if (!isKB){
+
+		}
+		isKB = 1;
+		processMKB();
+		return;
+	}
+	gimbal_yaw = 0;
+	gimbal_pitch = 0;
+	isKB = 0;
+	short joyLeftX = (short)(rc.ch3); // positive direction stay at right
+	short joyLeftY = (short)(-rc.ch4); // change positive direction to up
+	short joyRightX = (short)(rc.ch1); // positive direction stay at right
+	short joyRightY = (short)(-rc.ch2); // change positive direction to up
+	short joyRotation = 0;
+	switch(rc.sw1){
+		case 1: //left up (left stick strafe, right stick bot rotation)
+			joyRotation = joyRightX;
+			indexer_speed = 0 * RPM_SCALE;
+			isKB = 0;
+			break;
+		case 3: //left middle (left stick strafe, right stick aim)
+			gimbal_yaw = (short)(joyRightX * JOY_TO_ECD);
+			indexer_speed = 0 * RPM_SCALE;
+			isKB = 0;
+			break;
+		default: // reserve for keyboard
+			if (rc.sw2 == 1){ // flywheel on
+				gimbal_yaw = (short)(joyRightX * JOY_TO_ECD);
+				indexer_speed = 250 * RPM_SCALE;
+			}
+			break;
+	}
+	switch(rc.sw2){
+		case 1:
+			flywheel_speed = (short) (PWM_RESOLUTION * 0.2f);
+			isKB = 0;
+			break;
+		case 3:
+			flywheel_speed = (short) (PWM_RESOLUTION * 0.1f);
+			isKB = 0;
+			break;
+		default: // reserve for keyboard
+			break;
+	}
+
+	gimbal_pitch = (short)((joyRightY * JOY_TO_ECD) * 0.1f); // pitch don't have the same range as yaw, now limit to 20 degrees
+	LF_rpm = (short) ((joyLeftY - joyLeftX + joyRotation) * JOY_TO_RPM * RPM_SCALE * DRIVE_SPEED_DEFAULT);
+	RF_rpm = (short) ((joyLeftY + joyLeftX - joyRotation) * JOY_TO_RPM * RPM_SCALE * DRIVE_SPEED_DEFAULT);
+	LB_rpm = (short) ((joyLeftY + joyLeftX + joyRotation) * JOY_TO_RPM * RPM_SCALE * DRIVE_SPEED_DEFAULT);
+	RB_rpm = (short) ((joyLeftY - joyLeftX - joyRotation) * JOY_TO_RPM * RPM_SCALE * DRIVE_SPEED_DEFAULT);
+
+	LF_rpm = fmax(fmin(LF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	LB_rpm = fmax(fmin(LB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	RF_rpm = fmax(fmin(RF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	RB_rpm = fmax(fmin(RB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -229,20 +273,20 @@ int main(void)
   init_quaternion();
   pwm_imu_start();
   pwm_flywheel_start();
-  //pwm_buzzer_start();
+  pwm_buzzer_start();
   grand_pid_init();
   imu_calibration();
 
-  yaw_target = YAW_POS_DEFAULT;
-  pit_target = PIT_POS_DEFAULT;
-
-  //yaw_target = imu.yaw;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	float yaw_output;
+	float pit_output;
+	float wheels_output[4];
+	float indexer_output;
 	mpu_get_data();
 	imu_ahrs_update();
 	imu_attitude_update();
@@ -257,17 +301,21 @@ int main(void)
 	pit_ecd_target = PIT_POS_DEFAULT + gimbal_pitch;
 
 	yaw_ecd_target = set_rotation_target(yaw_ecd_target, ECD_PERIOD);
-	//pit_ecd_target = set_rotation_target(pit_ecd_target, ECD_PERIOD); // technically pitch should not rotate 360 degree, so no use
+	pit_ecd_target = set_rotation_target(pit_ecd_target, ECD_PERIOD);
 
-	float yaw_output = yaw_ecd_pid_ctrl(motors[4].ecd, yaw_ecd_target);
-	float pit_output = pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
+	if (isKB){
+		yaw_output = yaw_rpm_pid_ctrl(yaw_rpm);
+		pit_output = pit_rpm_pid_ctrl(pit_rpm);
+	} else {
+		yaw_output = yaw_ecd_pid_ctrl(motors[4].ecd, yaw_ecd_target);
+		pit_output = pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
+	}
 
-	float wheels_output[4];
 	wheels_rpm_ctrl_calc(-1 * LF_rpm,RF_rpm,-1 * LB_rpm,RB_rpm, wheels_output);
 
-	float indexer_output = indexer_rpm_ctrl_calc(indexer_speed);
+	indexer_output = indexer_rpm_ctrl_calc(indexer_speed);
 
-	/*can_transmit(&hcan1, CAN_CHASSIS_ALL_ID,
+	can_transmit(&hcan1, CAN_CHASSIS_ALL_ID,
 			wheels_output[0],
 			wheels_output[1],
 			wheels_output[2],
@@ -277,7 +325,7 @@ int main(void)
 			yaw_output,
 			pit_output,
 			indexer_output, 0);
-	 */
+
 	set_pwm_flywheel(flywheel_speed);
 
 

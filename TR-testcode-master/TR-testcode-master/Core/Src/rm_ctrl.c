@@ -171,6 +171,16 @@ float pit_ecd_pid_ctrl(float feedback, float target){
 	return pit_rpm_ecd_pid.out;
 }
 
+float yaw_rpm_pid_ctrl(float target){
+	PID_calc(&yaw_rpm_ecd_pid, motors[4].speed_rpm, target);
+	return yaw_rpm_ecd_pid.out;
+}
+
+float pit_rpm_pid_ctrl(float target){
+	PID_calc(&pit_rpm_ecd_pid, motors[5].speed_rpm, target);
+	return pit_rpm_ecd_pid.out;
+}
+
 void wheels_rpm_ctrl_calc(float LF, float LB, float RF, float RB, float arr[]){
 	PID_calc(&wheels_rpm_pid[0], motors[0].speed_rpm, LF);
 	PID_calc(&wheels_rpm_pid[1], motors[1].speed_rpm, LB);
