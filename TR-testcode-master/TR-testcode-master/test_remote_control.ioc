@@ -362,4 +362,3 @@ ProjectManager.LibraryCopy=1
 SH.S_TIM5_CH1.ConfNb=1
 NVIC.CAN1_RX0_IRQn=true\:0\:0\:false\:false\:true\:true\:true
 SPI5.Direction=SPI_DIRECTION_2LINES
-isbadioc=false

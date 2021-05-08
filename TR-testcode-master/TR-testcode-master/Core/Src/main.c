@@ -53,8 +53,8 @@
 #define DRIVE_RF_ID 2
 #define DRIVE_RB_ID 3
 #define RPM_SCALE 10
-#define JOY_TO_RPM (1 / 640.0f) // max 640, 640 / 640.0f = 1 rpm
-#define JOY_TO_ECD (6.4f) // max 640, 640 * 6.4f = 4096
+#define JOY_TO_RPM (1 / 660.0f) // max 660, 660 / 660.0f = 1 rpm
+#define JOY_TO_ECD (4096 / 660.0f) // max 660, 660 * (4096 / 660.0f) = 4096
 #define DRIVE_SPEED_DEFAULT 200 // 200 rpm
 #define MOTOR_BOUNDS 4500
 #define GIMBAL_RPM_LIMIT 3200
@@ -138,9 +138,9 @@ void processMKB(){
 	pit_rpm = fmax(fmin(mouseSpeedY, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
 
 	if (mouseRC) {
-		flywheel_speed = (short) (PWM_RESOLUTION * 0.2f);
+		flywheel_speed = (short) (PWM_RESOLUTION * 0.5f);
 	} else {
-		flywheel_speed = (short) (PWM_RESOLUTION * 0.1f);
+		flywheel_speed = (short) (PWM_RESOLUTION * 0.4f);
 	}
 
 	if (mouseLC) {
@@ -163,13 +163,18 @@ void processMKB(){
 void processController(){
 	// axies y-> up, x -> right, motors going forward when pos (left CCW, right CW)
 	if (rc.sw1 == 2 && rc.sw2 == 2){
-		if (!isKB){
-
+		if (!isKB){ // last time not kb
+			// transition from controller to KB
 		}
 		isKB = 1;
 		processMKB();
 		return;
 	}
+	if (isKB) { // last time kb
+		// transition from KB to controller
+
+	}
+	isKB = 0;
 	gimbal_yaw = 0;
 	gimbal_pitch = 0;
 	isKB = 0;
@@ -182,12 +187,10 @@ void processController(){
 		case 1: //left up (left stick strafe, right stick bot rotation)
 			joyRotation = joyRightX;
 			indexer_speed = 0 * RPM_SCALE;
-			isKB = 0;
 			break;
 		case 3: //left middle (left stick strafe, right stick aim)
 			gimbal_yaw = (short)(joyRightX * JOY_TO_ECD);
 			indexer_speed = 0 * RPM_SCALE;
-			isKB = 0;
 			break;
 		default: // reserve for keyboard
 			if (rc.sw2 == 1){ // flywheel on
@@ -198,12 +201,10 @@ void processController(){
 	}
 	switch(rc.sw2){
 		case 1:
-			flywheel_speed = (short) (PWM_RESOLUTION * 0.2f);
-			isKB = 0;
+			flywheel_speed = (short) (PWM_RESOLUTION * 0.5f);
 			break;
 		case 3:
-			flywheel_speed = (short) (PWM_RESOLUTION * 0.1f);
-			isKB = 0;
+			flywheel_speed = (short) (PWM_RESOLUTION * 0.4f);
 			break;
 		default: // reserve for keyboard
 			break;
@@ -311,7 +312,7 @@ int main(void)
 		pit_output = pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
 	}
 
-	wheels_rpm_ctrl_calc(-1 * LF_rpm,RF_rpm,-1 * LB_rpm,RB_rpm, wheels_output);
+	wheels_rpm_ctrl_calc(-LF_rpm,RF_rpm,-LB_rpm,RB_rpm, wheels_output);
 
 	indexer_output = indexer_rpm_ctrl_calc(indexer_speed);
 
