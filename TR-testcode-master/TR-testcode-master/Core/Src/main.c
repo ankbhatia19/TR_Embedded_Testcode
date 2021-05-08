@@ -53,8 +53,8 @@
 #define DRIVE_RF_ID 2
 #define DRIVE_RB_ID 3
 #define RPM_SCALE 10
-#define JOY_TO_RPM (1 / 640.0f) // max 640, 640 / 640.0f = 1 rpm
-#define JOY_TO_ECD (6.4f) // max 640, 640 * 6.4f = 4096
+#define JOY_TO_RPM (1 / 660.0f) // max 640, 640 / 640.0f = 1 rpm
+#define JOY_TO_ECD (4096 / 660.0f) // max 640, 640 * 6.4f = 4096
 #define DRIVE_SPEED_DEFAULT 200 // 200 rpm
 #define MOTOR_BOUNDS 4500
 #define GIMBAL_RPM_LIMIT 3200
@@ -138,9 +138,9 @@ void processMKB(){
 	pit_rpm = fmax(fmin(mouseSpeedY, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
 
 	if (mouseRC) {
-		flywheel_speed = (short) (PWM_RESOLUTION * 0.2f);
+		flywheel_speed = (short) (PWM_RESOLUTION * 0.5f);
 	} else {
-		flywheel_speed = (short) (PWM_RESOLUTION * 0.1f);
+		flywheel_speed = (short) (PWM_RESOLUTION * 0.4f);
 	}
 
 	if (mouseLC) {
@@ -198,11 +198,11 @@ void processController(){
 	}
 	switch(rc.sw2){
 		case 1:
-			flywheel_speed = (short) (PWM_RESOLUTION * 0.2f);
+			flywheel_speed = (short) (PWM_RESOLUTION * 0.5f);
 			isKB = 0;
 			break;
 		case 3:
-			flywheel_speed = (short) (PWM_RESOLUTION * 0.1f);
+			flywheel_speed = (short) (PWM_RESOLUTION * 0.4f);
 			isKB = 0;
 			break;
 		default: // reserve for keyboard
@@ -275,7 +275,7 @@ int main(void)
   pwm_flywheel_start();
   pwm_buzzer_start();
   grand_pid_init();
-  imu_calibration();
+  //imu_calibration();
 
   /* USER CODE END 2 */
 
@@ -283,6 +283,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
 	float yaw_output;
 	float pit_output;
 	float wheels_output[4];
@@ -311,7 +312,7 @@ int main(void)
 		pit_output = pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
 	}
 
-	wheels_rpm_ctrl_calc(-1 * LF_rpm,RF_rpm,-1 * LB_rpm,RB_rpm, wheels_output);
+	wheels_rpm_ctrl_calc(-LF_rpm,RF_rpm,-LB_rpm,RB_rpm, wheels_output);
 
 	indexer_output = indexer_rpm_ctrl_calc(indexer_speed);
 
@@ -325,7 +326,7 @@ int main(void)
 			yaw_output,
 			pit_output,
 			indexer_output, 0);
-
+	//flywheel_speed = (rc.ch4 / 660.0f + 1) * 1000;
 	set_pwm_flywheel(flywheel_speed);
 
 
