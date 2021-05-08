@@ -53,8 +53,8 @@
 #define DRIVE_RF_ID 2
 #define DRIVE_RB_ID 3
 #define RPM_SCALE 10
-#define JOY_TO_RPM (1 / 660.0f) // max 660, 660 / 660.0f = 1 rpm
-#define JOY_TO_ECD (4096 / 660.0f) // max 660, 660 * (4096 / 660.0f) = 4096
+#define JOY_TO_RPM (1 / 660.0f) // max 640, 640 / 640.0f = 1 rpm
+#define JOY_TO_ECD (4096 / 660.0f) // max 640, 640 * 6.4f = 4096
 #define DRIVE_SPEED_DEFAULT 200 // 200 rpm
 #define MOTOR_BOUNDS 4500
 #define GIMBAL_RPM_LIMIT 3200
@@ -276,7 +276,7 @@ int main(void)
   pwm_flywheel_start();
   pwm_buzzer_start();
   grand_pid_init();
-  imu_calibration();
+  //imu_calibration();
 
   /* USER CODE END 2 */
 
@@ -284,6 +284,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
 	float yaw_output;
 	float pit_output;
 	float wheels_output[4];
@@ -326,7 +327,7 @@ int main(void)
 			yaw_output,
 			pit_output,
 			indexer_output, 0);
-
+	//flywheel_speed = (rc.ch4 / 660.0f + 1) * 1000;
 	set_pwm_flywheel(flywheel_speed);
 
 
