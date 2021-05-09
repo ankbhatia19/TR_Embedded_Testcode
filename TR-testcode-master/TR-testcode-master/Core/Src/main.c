@@ -63,7 +63,7 @@
 #define RPM_SCALE 10
 #define JOY_TO_RPM (1 / 660.0f) // max 640, 640 / 640.0f = 1 rpm
 #define JOY_TO_ECD (4096 / 660.0f) // max 640, 640 * 6.4f = 4096
-#define DRIVE_SPEED_DEFAULT 200 // 200 rpm
+#define DRIVE_SPEED_DEFAULT 1000 // 1000 rpm
 #define MOTOR_BOUNDS 4500
 #define GIMBAL_RPM_LIMIT 3200
 
@@ -141,14 +141,14 @@ void processMKB(){
 	// axies y-> up, x -> right, motors going forward when pos (left CCW, right CW)
 	short kbX = rc.kb.bit.D - rc.kb.bit.A;
 	short kbY = rc.kb.bit.W - rc.kb.bit.S;
-	short kbRotation = rc.kb.bit.E - rc.kb.bit.Q;
+	short kbRotation = rc.kb.bit.Q - rc.kb.bit.E;
 	short mouseLC = rc.mouse.l;
 	short mouseRC = rc.mouse.r;
 	short mouseSpeedX = rc.mouse.x;
 	short mouseSpeedY = rc.mouse.y;
 
-	yaw_rpm = fmax(fmin(mouseSpeedX, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
-	pit_rpm = fmax(fmin(mouseSpeedY, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
+	yaw_rpm = fmax(fmin(mouseSpeedX * 10, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
+	pit_rpm = fmax(fmin(mouseSpeedY * 10, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
 
 	gimbal_yaw += mouseSpeedX;
 	gimbal_pitch += mouseSpeedY;
@@ -202,7 +202,7 @@ void processController(){
 	short joyRotation = 0;
 	switch(rc.sw1){
 		case 1: //left up (left stick strafe, right stick bot rotation)
-			joyRotation = joyRightX;
+			joyRotation = -joyRightX;
 			indexer_speed = 0 * RPM_SCALE;
 			break;
 		case 3: //left middle (left stick strafe, right stick aim)
