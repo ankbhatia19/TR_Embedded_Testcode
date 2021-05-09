@@ -61,9 +61,9 @@
 #define DRIVE_RF_ID 2
 #define DRIVE_RB_ID 3
 #define RPM_SCALE 10
-#define JOY_TO_RPM (1 / 660.0f) // max 640, 640 / 640.0f = 1 rpm
-#define JOY_TO_ECD (4096 / 660.0f) // max 640, 640 * 6.4f = 4096
-#define DRIVE_SPEED_DEFAULT 1000 // 1000 rpm
+#define JOY_TO_RPM (1 / 660.0f) // max 660, 660 / 660.0f = 1 rpm
+#define JOY_TO_ECD (4096 / 660.0f) // max 660, 660 * (4096 / 660.0f = 4096
+#define DRIVE_SPEED_DEFAULT 450 // 450 rpm
 #define MOTOR_BOUNDS 4500
 #define GIMBAL_RPM_LIMIT 3200
 
@@ -150,8 +150,8 @@ void processMKB(){
 	yaw_rpm = fmax(fmin(mouseSpeedX * 10, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
 	pit_rpm = fmax(fmin(mouseSpeedY * 10, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
 
-	gimbal_yaw += mouseSpeedX;
-	gimbal_pitch += mouseSpeedY;
+	gimbal_yaw += mouseSpeedX * 10;
+	gimbal_pitch += mouseSpeedY * 10;
 
 	if (mouseRC) {
 		flywheel_speed = (short) (PWM_RESOLUTION * 0.5f);
@@ -192,9 +192,8 @@ void processController(){
 		gimbal_pid_clear();
 	}
 	isKB = 0;
-	gimbal_yaw = 0;
-	gimbal_pitch = 0;
-	isKB = 0;
+	//gimbal_yaw = 0;
+	//gimbal_pitch = 0;
 	short joyLeftX = (short)(rc.ch3); // positive direction stay at right
 	short joyLeftY = (short)(-rc.ch4); // change positive direction to up
 	short joyRightX = (short)(rc.ch1); // positive direction stay at right
@@ -211,7 +210,7 @@ void processController(){
 			break;
 		default: // reserve for keyboard
 			if (rc.sw2 == 1){ // flywheel on
-				gimbal_yaw = (short)(joyRightX * JOY_TO_ECD);
+				gimbal_yaw += (short)(joyRightX * JOY_TO_ECD * 0.1f);
 				indexer_speed = 250 * RPM_SCALE;
 			}
 			break;
@@ -227,7 +226,7 @@ void processController(){
 			break;
 	}
 
-	gimbal_pitch = (short)((joyRightY * JOY_TO_ECD) * 0.1f); // pitch don't have the same range as yaw, now limit to 20 degrees
+	gimbal_pitch += (short)((joyRightY * JOY_TO_ECD) * 0.05f); // pitch don't have the same range as yaw, now limit to 20 degrees
 	LF_rpm = (short) ((joyLeftY - joyLeftX + joyRotation) * JOY_TO_RPM * RPM_SCALE * DRIVE_SPEED_DEFAULT);
 	RF_rpm = (short) ((joyLeftY + joyLeftX - joyRotation) * JOY_TO_RPM * RPM_SCALE * DRIVE_SPEED_DEFAULT);
 	LB_rpm = (short) ((joyLeftY + joyLeftX + joyRotation) * JOY_TO_RPM * RPM_SCALE * DRIVE_SPEED_DEFAULT);
@@ -325,8 +324,10 @@ int main(void)
 	pit_ecd_target = set_rotation_target(pit_ecd_target, ECD_PERIOD);
 
 	if (isKB){
-		yaw_output = yaw_rpm_pid_ctrl(yaw_rpm);
-		pit_output = pit_rpm_pid_ctrl(pit_rpm);
+		//yaw_output = yaw_rpm_pid_ctrl(yaw_rpm);
+		//pit_output = pit_rpm_pid_ctrl(pit_rpm);
+		yaw_output = yaw_ecd_pid_ctrl(motors[4].ecd, yaw_ecd_target);
+		pit_output = pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
 	} else {
 		yaw_output = yaw_ecd_pid_ctrl(motors[4].ecd, yaw_ecd_target);
 		pit_output = pit_ecd_pid_ctrl(motors[5].ecd, pit_ecd_target);
