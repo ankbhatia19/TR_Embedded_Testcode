@@ -181,6 +181,13 @@ float pit_rpm_pid_ctrl(float target){
 	return pit_rpm_ecd_pid.out;
 }
 
+void gimbal_pid_clear(){
+	PID_clear(&yaw_pos_ecd_pid);
+	PID_clear(&pit_pos_ecd_pid);
+	PID_clear(&yaw_rpm_ecd_pid);
+	PID_clear(&pit_rpm_ecd_pid);
+}
+
 void wheels_rpm_ctrl_calc(float LF, float LB, float RF, float RB, float arr[]){
 	PID_calc(&wheels_rpm_pid[0], motors[0].speed_rpm, LF);
 	PID_calc(&wheels_rpm_pid[1], motors[1].speed_rpm, LB);

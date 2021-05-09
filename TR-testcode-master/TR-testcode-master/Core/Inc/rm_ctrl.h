@@ -37,6 +37,8 @@ extern float yaw_rpm_pid_ctrl(float target);
 
 extern float pit_rpm_pid_ctrl(float target);
 
+extern void gimbal_pid_clear();
+
 extern void wheels_rpm_ctrl_calc(float LF, float LB, float RF, float RB, float arr[]);
 
 extern float indexer_rpm_ctrl_calc(float target);

@@ -42,11 +42,19 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define INF_2
+//#define SENTRY
+
 // default positions
 #ifdef INF_2
 #define YAW_POS_DEFAULT (750)
 #define PIT_POS_DEFAULT (6730)
 #endif
+
+#ifdef SENTRY
+#define YAW_POS_DEFAULT (750)
+#define PIT_POS_DEFAULT (6730)
+#endif
+
 
 #define DRIVE_LF_ID 0
 #define DRIVE_LB_ID 1
@@ -120,10 +128,15 @@ static void MX_TIM5_Init(void);
 /* USER CODE BEGIN PFP */
 void processMKB();
 void processController();
+void processSentry();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void processSentry(){
+
+}
+
 void processMKB(){
 	// axies y-> up, x -> right, motors going forward when pos (left CCW, right CW)
 	short kbX = rc.kb.bit.D - rc.kb.bit.A;
@@ -136,6 +149,9 @@ void processMKB(){
 
 	yaw_rpm = fmax(fmin(mouseSpeedX, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
 	pit_rpm = fmax(fmin(mouseSpeedY, GIMBAL_RPM_LIMIT), -GIMBAL_RPM_LIMIT);
+
+	gimbal_yaw += mouseSpeedX;
+	gimbal_pitch += mouseSpeedY;
 
 	if (mouseRC) {
 		flywheel_speed = (short) (PWM_RESOLUTION * 0.5f);
@@ -165,6 +181,7 @@ void processController(){
 	if (rc.sw1 == 2 && rc.sw2 == 2){
 		if (!isKB){ // last time not kb
 			// transition from controller to KB
+			gimbal_pid_clear();
 		}
 		isKB = 1;
 		processMKB();
@@ -172,7 +189,7 @@ void processController(){
 	}
 	if (isKB) { // last time kb
 		// transition from KB to controller
-
+		gimbal_pid_clear();
 	}
 	isKB = 0;
 	gimbal_yaw = 0;
@@ -270,9 +287,11 @@ int main(void)
   power_on();
   dbus_uart_init();
   can_filter_init();
+
   mpu_device_init();
   init_quaternion();
-  pwm_imu_start();
+  //pwm_imu_start();
+
   pwm_flywheel_start();
   pwm_buzzer_start();
   grand_pid_init();
