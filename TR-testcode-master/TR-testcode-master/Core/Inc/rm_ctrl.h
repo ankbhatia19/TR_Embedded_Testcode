@@ -29,13 +29,19 @@ extern void imu_temp_pid_ctrl(float feedback, float target);
 
 extern float yaw_imu_pid_ctrl(float feedback, float target);
 
-extern float yaw_ecd_pid_ctrl(float feedback, float target);
+extern float pit_imu_pid_ctrl(float feedback, float target);
 
-extern float pit_ecd_pid_ctrl(float feedback, float target);
+extern float yaw_ecd_cascade_ctrl(float target);
+
+extern float pit_ecd_cascade_ctrl(float target);
 
 extern float yaw_rpm_pid_ctrl(float target);
 
 extern float pit_rpm_pid_ctrl(float target);
+
+extern float yaw_ecd_direct_ctrl(float target);
+
+extern float pit_ecd_direct_ctrl(float target);
 
 extern void gimbal_pid_clear();
 
