@@ -22,18 +22,18 @@ const float yaw_deg_imu_PID[3] = {20, 0.1, 3};
 pid_type_def yaw_deg_imu_pid;
 const float yaw_rpm_imu_PID[3] = {50, 0.1, 0};
 pid_type_def yaw_rpm_imu_pid;
-const float yaw_pos_ecd_PID[3] = {5, 0.1, 3};
+const float yaw_pos_ecd_PID[3] = {1, 0, 0};
 pid_type_def yaw_pos_ecd_pid;
-const float yaw_rpm_ecd_PID[3] = {10, 0.1, 0};
+const float yaw_rpm_ecd_PID[3] = {100, 0, 0};
 pid_type_def yaw_rpm_ecd_pid;
 
 const float pit_deg_imu_PID[3] = {20, 0.1, 3};
 pid_type_def pit_deg_imu_pid;
 const float pit_rpm_imu_PID[3] = {50, 0.1, 0};
 pid_type_def pit_rpm_imu_pid;
-const float pit_pos_ecd_PID[3] = {5, 0.1, 3};
+const float pit_pos_ecd_PID[3] = {1, 0, 0};
 pid_type_def pit_pos_ecd_pid;
-const float pit_rpm_ecd_PID[3] = {10, 0.1, 0};
+const float pit_rpm_ecd_PID[3] = {100, 0, 0};
 pid_type_def pit_rpm_ecd_pid;
 
 const float idx_rpm_ecd_PID[3] = {10, 0.1, 0}; // indexer
