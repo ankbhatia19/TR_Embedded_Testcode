@@ -45,7 +45,9 @@ extern float pit_ecd_direct_ctrl(float target);
 
 extern void gimbal_pid_clear();
 
-extern void wheels_rpm_ctrl_calc(float LF, float LB, float RF, float RB, float arr[]);
+extern void wheels_rpm_ctrl_calc(float LF_speed, float RF_speed, float LB_speed, float RB_speed, float output[]);
+
+extern float chassis_follow_ctrl(float target, float deadzone);
 
 extern float indexer_rpm_ctrl_calc(float target);
 

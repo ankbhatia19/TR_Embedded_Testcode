@@ -47,12 +47,16 @@ pid_type_def pit_ecd_cur_pid;
 const float idx_rpm_cur_PID[3] = {10, 0.1, 0}; // indexer
 pid_type_def idx_rpm_cur_pid;
 
+const float chassis_follow_PID[3] = {150, 0.01, 0}; // chassis follow
+pid_type_def chassis_follow_pid;
+
 void grand_pid_init(){
 	PID_init(&imu_temp_pid, PID_POSITION, imu_temp_PID, TEMPERATURE_PID_MAX_OUT, TEMPERATURE_PID_MAX_IOUT);
 
 	for (int i = 0; i < 4; i++){
 		PID_init(&wheels_rpm_pid[i], PID_POSITION, wheels_rpm_PID, 16384, 1000); // M3508 output limit: 16384, rpm limit 450
 	}
+	PID_init(&chassis_follow_pid, PID_POSITION, chassis_follow_PID, 16384, 1000);
 
 	PID_init(&yaw_deg_imu_pid, PID_POSITION, yaw_deg_imu_PID, 3200, 100);
 	PID_init(&yaw_rpm_imu_pid, PID_POSITION, yaw_rpm_imu_PID, 30000, 5000); // GM6020 output limit: 30000
@@ -70,6 +74,18 @@ void grand_pid_init(){
 	PID_init(&pit_ecd_cur_pid, PID_POSITION, pit_ecd_cur_PID, 30000, 5000);
 
 	PID_init(&idx_rpm_cur_pid, PID_POSITION, idx_rpm_cur_PID, 10000, 100); // GM2006 output limit: 10000, max rpm 500
+
+
+}
+
+void gimbal_pid_clear(){
+	PID_clear(&yaw_ecd_rpm_pid);
+	PID_clear(&pit_ecd_rpm_pid);
+	PID_clear(&yaw_rpm_cur_pid);
+	PID_clear(&pit_rpm_cur_pid);
+	PID_clear(&yaw_ecd_cur_pid);
+	PID_clear(&pit_ecd_cur_pid);
+	PID_clear(&chassis_follow_pid);
 }
 
 void imu_calibration(){
@@ -216,13 +232,12 @@ float pit_rpm_pid_ctrl(float target){
 	return pit_rpm_cur_pid.out;
 }
 
-void gimbal_pid_clear(){
-	PID_clear(&yaw_ecd_rpm_pid);
-	PID_clear(&pit_ecd_rpm_pid);
-	PID_clear(&yaw_rpm_cur_pid);
-	PID_clear(&pit_rpm_cur_pid);
-	PID_clear(&yaw_ecd_cur_pid);
-	PID_clear(&pit_ecd_cur_pid);
+float chassis_follow_ctrl(float target, float deadzone) {
+	deadzone = deadzone > 0 ? deadzone : -deadzone;
+	float feedback = motors[4].ecd;
+	float error = get_rotation_actual_error(feedback, target, ECD_PERIOD);
+	PID_calc(&chassis_follow_pid, 0, error);
+	return ((chassis_follow_pid.out < deadzone) && (chassis_follow_pid.out > -deadzone)) ? 0 : chassis_follow_pid.out;
 }
 
 void wheels_rpm_ctrl_calc(float LF_speed, float RF_speed, float LB_speed, float RB_speed, float output[]){

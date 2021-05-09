@@ -256,10 +256,17 @@ void outINF(short isKB, short yaw_ecd_delta, short pitch_ecd_delta,
 //		pit_output = pit_ecd_direct_ctrl(pit_ecd_target);
 	}
 
-	LF_rpm = fmax(fmin(LF_rpm - pid_rotation,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	RF_rpm = fmax(fmin(RF_rpm + pid_rotation,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	LB_rpm = fmax(fmin(LB_rpm - pid_rotation,MOTOR_BOUNDS),-MOTOR_BOUNDS);
-	RB_rpm = fmax(fmin(RB_rpm + pid_rotation,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	//pid_rotation = chassis_follow_ctrl(YAW_POS_DEFAULT, 0.5f);
+
+	LF_rpm = LF_rpm - pid_rotation;
+	RF_rpm = RF_rpm + pid_rotation;
+	LB_rpm = LB_rpm - pid_rotation;
+	RB_rpm = RB_rpm + pid_rotation;
+
+	LF_rpm = fmax(fmin(LF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	RF_rpm = fmax(fmin(RF_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	LB_rpm = fmax(fmin(LB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
+	RB_rpm = fmax(fmin(RB_rpm,MOTOR_BOUNDS),-MOTOR_BOUNDS);
 
 	wheels_rpm_ctrl_calc(LF_rpm, RF_rpm, LB_rpm, RB_rpm, wheels_output);
 	indexer_output = indexer_rpm_ctrl_calc(indexer_speed);
