@@ -41,8 +41,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define INF_2
+//#define INF_2
 //#define SENTRY
+#define HERO
 
 // default positions
 #ifdef INF_2
@@ -50,9 +51,14 @@
 #define PIT_POS_DEFAULT (6730)
 #endif
 
-#ifdef SENTRY
-#define YAW_POS_DEFAULT (750)
+#ifdef HERO
+#define YAW_POS_DEFAULT (2800)
 #define PIT_POS_DEFAULT (6730)
+#endif
+
+#ifdef SENTRY
+#define YAW_POS_DEFAULT (4350)
+#define PIT_POS_DEFAULT (1500)
 #endif
 
 
@@ -194,10 +200,10 @@ void processController(){
 	isKB = 0;
 	//gimbal_yaw = 0;
 	//gimbal_pitch = 0;
-	short joyLeftX = (short)(rc.ch3); // positive direction stay at right
-	short joyLeftY = (short)(-rc.ch4); // change positive direction to up
-	short joyRightX = (short)(rc.ch1); // positive direction stay at right
-	short joyRightY = (short)(-rc.ch2); // change positive direction to up
+	short joyLeftX = (short)(rc.ch4); // positive direction stay at right
+	short joyLeftY = (short)(-rc.ch3); // change positive direction to up
+	short joyRightX = (short)(rc.ch2); // positive direction stay at right
+	short joyRightY = (short)(rc.ch1); // change positive direction to up
 	short joyRotation = 0;
 	switch(rc.sw1){
 		case 1: //left up (left stick strafe, right stick bot rotation)
@@ -217,7 +223,7 @@ void processController(){
 	}
 	switch(rc.sw2){
 		case 1:
-			flywheel_speed = (short) (PWM_RESOLUTION * 0.5f);
+			flywheel_speed = (short) (PWM_RESOLUTION * 0.5f); //0.5 for infantry
 			break;
 		case 3:
 			flywheel_speed = (short) (PWM_RESOLUTION * 0.4f);

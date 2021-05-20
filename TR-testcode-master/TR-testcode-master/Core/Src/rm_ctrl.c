@@ -33,7 +33,7 @@ const float pit_rpm_imu_PID[3] = {50, 0.1, 0};
 pid_type_def pit_rpm_imu_pid;
 const float pit_pos_ecd_PID[3] = {1, 0, 0};
 pid_type_def pit_pos_ecd_pid;
-const float pit_rpm_ecd_PID[3] = {100, 0, 0};
+const float pit_rpm_ecd_PID[3] = {10, 0, 0};
 pid_type_def pit_rpm_ecd_pid;
 
 const float idx_rpm_ecd_PID[3] = {10, 0.1, 0}; // indexer
@@ -49,13 +49,13 @@ void grand_pid_init(){
 
 	PID_init(&yaw_deg_imu_pid, PID_POSITION, yaw_deg_imu_PID, 3200, 100);
 	PID_init(&yaw_rpm_imu_pid, PID_POSITION, yaw_rpm_imu_PID, 30000, 5000); // GM6020 output limit: 30000
-	PID_init(&yaw_pos_ecd_pid, PID_POSITION, yaw_pos_ecd_PID, 3200, 100); // GM6020 max rpm: 320
+	PID_init(&yaw_pos_ecd_pid, PID_POSITION, yaw_pos_ecd_PID, 3200, 100); // 3200 for infantry GM6020 max rpm: 320
 	PID_init(&yaw_rpm_ecd_pid, PID_POSITION, yaw_rpm_ecd_PID, 30000, 5000);
 
 	PID_init(&pit_deg_imu_pid, PID_POSITION, pit_deg_imu_PID, 3200, 100);
 	PID_init(&pit_rpm_imu_pid, PID_POSITION, pit_rpm_imu_PID, 30000, 5000);
-	PID_init(&pit_pos_ecd_pid, PID_POSITION, pit_pos_ecd_PID, 3200, 100);
-	PID_init(&pit_rpm_ecd_pid, PID_POSITION, pit_rpm_ecd_PID, 30000, 5000);
+	PID_init(&pit_pos_ecd_pid, PID_POSITION, pit_pos_ecd_PID, 3200, 100); //100 for infantry
+	PID_init(&pit_rpm_ecd_pid, PID_POSITION, pit_rpm_ecd_PID, 30000, 5000); //5000 for infantry
 
 	PID_init(&idx_rpm_ecd_pid, PID_POSITION, idx_rpm_ecd_PID, 10000, 100); // GM2006 output limit: 10000, max rpm 500
 }
