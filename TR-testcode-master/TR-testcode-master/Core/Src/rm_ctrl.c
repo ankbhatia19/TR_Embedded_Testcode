@@ -38,10 +38,10 @@ pid_type_def pit_ecd_rpm_pid;
 const float pit_rpm_cur_PID[3] = {100, 0, 0};
 pid_type_def pit_rpm_cur_pid;
 
-const float yaw_ecd_cur_PID[3] = {1, 0, 0};
+const float yaw_ecd_cur_PID[3] = {0.5 * 350, 0, 0.5 * 350 * 0.3}; //Oscillation period 0.3 seconds
 pid_type_def yaw_ecd_cur_pid;
 
-const float pit_ecd_cur_PID[3] = {1, 0, 0};
+const float pit_ecd_cur_PID[3] = {20, 0, 0};
 pid_type_def pit_ecd_cur_pid;
 
 const float idx_rpm_cur_PID[3] = {10, 0.1, 0}; // indexer
